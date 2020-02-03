@@ -4,6 +4,7 @@ import os
 import json
 from abc import *
 from PIL import Image
+import math
 
 
 class Singleton:
@@ -21,9 +22,9 @@ class Singleton:
 
 
 class PathClass(Singleton):
-    rawFolder = "D:/safeTraining/"
-    jsonFolder = "D:/json/safe/"
-    imageFolder = "D:/rgbset/safe/"
+    rawFolder = "C:/Users/eotlr/data/safe/safeTest/"
+    jsonFolder = "C:/Users/eotlr/data/json/safe/training/"
+    imageFolder = "C:/Users/eotlr/data/blending/training/safe/"
     correlation = "C:/Users/eotlr/data/testcor/cor.txt"
 
     def __init__(self):
@@ -121,7 +122,8 @@ class AbstractResizerClass(metaclass=ABCMeta):
         self.save()
 
     def chunking(self, filter):
-        return (self._data[i:i+filter] for i in range(0,self._size,filter))
+        result = list(self._data[i:i+filter] for i in range(0,self._size,filter))
+        return result
 
     @abstractmethod
     def save(self):
@@ -270,22 +272,62 @@ class RelationshipImage(AbstractResizerClass):
         # cv.imshow(mat=self._result,winname="wtf")
         # cv.waitKey(0)
 
+    def get_image(self):
+        return self._result
+
 class RawByteImage(AbstractResizerClass):
     def __init__(self,child):
         AbstractResizerClass.__init__(self=self,child=child)
-        self.targetSize = 256*256*3
+        self.targetSize = int(math.sqrt(int(self._size/3)))+1
+    def save(self):
+        name = self._child.split(".")[0]+".png"
+        cv.imwrite(PathClass.instance().getImageFolder()+name, self._result)
 
     def operating(self):
         super().operating()
 
     def resizing(self):
-        if self._resizing_size > len(self._size):
-            self._data = super().appendPadding(self._data)
-        self._result = self._making_image()
+        goalSize = self.targetSize * self.targetSize * 3
+        if goalSize > self._size:
+            for i in range(0, goalSize - self._size):
+                self._data.append(0)
+        self._making_image()
 
     def _making_image(self):
-        chunks = super().chunking(filter=3)
-        
+        self._data = super().chunking(filter=3)
+        self._result = self._making_row(self._data)
 
-class ImageBlender(AbstractResizerClass):
-    def __init__(self):
+    def _making_row(self,original):
+        result = np.zeros((self.targetSize,self.targetSize,3))
+        original = super().chunking(filter=self.targetSize)
+        for i in range(0,self.targetSize):
+            for j in range(0, self.targetSize):
+                try:
+                    if original[i][j]:
+                        result[i][j] = np.array(original[i][j])
+                except Exception as ex:
+                    pass
+            # result[i] = np.array(original[i*self.targetSize:(i+1)*self.targetSize])
+        return result
+
+    def get_image(self):
+        return self._result
+
+
+class ImageBlender:
+    def __init__(self, child):
+        self._child = child
+        self._relationship = RelationshipImage(child=child)
+        self._rawByteImage = RawByteImage(child=child)
+
+    def operating(self):
+        self._relationship.resizing()
+        self._rawByteImage.resizing()
+        relation_image = self._relationship.get_image()
+        raw_byte_image = self._rawByteImage.get_image()
+        raw_byte_image = cv.resize(raw_byte_image, dsize=(256, 256), interpolation=cv.INTER_AREA)
+        raw_byte_rate = 0.5
+        relation_rate = 1 - raw_byte_rate
+        dst = cv.addWeighted(raw_byte_image, raw_byte_rate, relation_image, relation_rate, 0)
+        name = self._child.split(".")[0]+".png"
+        cv.imwrite(PathClass.instance().getImageFolder()+name, dst)

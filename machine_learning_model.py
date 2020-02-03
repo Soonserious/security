@@ -4,6 +4,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+
 class Singleton:
     __instance = None
 
@@ -20,9 +21,9 @@ class Singleton:
 class PathClass(Singleton):
 
     def __init__(self):
-        self._data_folder = "D:/rgbset/traindata/"
-        self._result_folder ="D:/mymodel/"
-        self._validation_dir = "D:/rgbset/validation/"
+        self._data_folder = "C:/Users/eotlr/data/blending/training/"
+        self._result_folder ="C:/Users/eotlr/machine_learning_model/"
+        self._validation_dir = "C:/Users/eotlr/data/blending/validation/"
 
     def get_data_folder(self):
         return self._data_folder
@@ -76,13 +77,13 @@ class abstract_machine_learning_class(metaclass=ABCMeta):
         # model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
         sample_training_images , _ = next(self._train_imgae_gen)
         model = tf.keras.models.Sequential()
-        model.add(tf.keras.layers.Conv2D(6, (1,2) ,input_shape=(self._img_size[0],self._img_size[1],3), activation="relu"))
-        model.add(tf.keras.layers.MaxPool2D(1,2))
-        model.add(tf.keras.layers.Conv2D(10, (1,2) , activation="relu"))
-        model.add(tf.keras.layers.MaxPool2D(1,2))
+        model.add(tf.keras.layers.Conv2D(20, (2,2) ,input_shape=(self._img_size[0],self._img_size[1],3), activation="relu"))
+        model.add(tf.keras.layers.MaxPool2D(2,2))
+        model.add(tf.keras.layers.Conv2D(32, (2,2) , activation="relu"))
+        model.add(tf.keras.layers.MaxPool2D(2,2))
         model.add(tf.keras.layers.Dropout(0.2))
         model.add(tf.keras.layers.Flatten())
-        model.add(tf.keras.layers.Dense(64,activation="relu"))
+        model.add(tf.keras.layers.Dense(100,activation="relu"))
         model.add(tf.keras.layers.Dense(1,activation="sigmoid"))
         model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
         model.summary()
@@ -115,3 +116,29 @@ class abstract_machine_learning_class(metaclass=ABCMeta):
         plt.show()
         saveName = time.strftime("%Y-%m-%d-%H-%M",time.localtime(time.time()))
         model.save(PathClass.instance().get_result_folder()+saveName+".h5")
+
+# class Inception_v4(metaclass=abstract_machine_learning_class):
+#     def __init__(self):
+#         abstract_machine_learning_class.__init__(self=self)
+#
+#     def learning(self):
+#         sample_traing_image, _ = next(self._train_imgae_gen)
+#         model = tf.keras.models.Sequential([
+#             tf.keras.layers.Conv2D(16, 8, padding="valid", activation="relu",
+#                                    input_shape=(self._img_size[0] ,self._img_size[1],3)),
+#             tf.keras.layers.MaxPool2D(),
+#             tf.keras.layers.Conv2D(32, 4, padding="valid", activation="relu"),
+#
+#             tf.keras.layers.MaxPool2D(),
+#             tf.keras.layers.Conv1D(filters=64,kernel_size=2,padding="valid", activation="relu", strides=2),
+#             tf.keras.layers.MaxPool1D(),
+#             tf.keras.layers.Dropout(0.2),
+#             tf.keras.layers.Flatten(),
+#             tf.keras.layers.Dense(1024, activation="relu"),
+#             tf.keras.layers.Dense(1, activation="sigmoid")
+#         ])
+#         model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+#
+#
+
+
