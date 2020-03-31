@@ -3,7 +3,6 @@ import numpy as np
 import os
 import json
 from abc import *
-from PIL import Image
 import math
 
 
@@ -22,9 +21,9 @@ class Singleton:
 
 
 class PathClass(Singleton):
-    rawFolder = "C:/Users/eotlr/data/safe/safeTest/"
-    jsonFolder = "C:/Users/eotlr/data/json/safe/training/"
-    imageFolder = "C:/Users/eotlr/data/blending/training/safe/"
+    rawFolder = "C:/Users/eotlr/data/malwareTest/"
+    jsonFolder = "C:/Users/eotlr/data/malwareJson/"
+    imageFolder = "C:/Users/eotlr/data/malwareImage/"
     correlation = "C:/Users/eotlr/data/testcor/cor.txt"
 
     def __init__(self):
@@ -122,8 +121,7 @@ class AbstractResizerClass(metaclass=ABCMeta):
         self.save()
 
     def chunking(self, filter):
-        result = list(self._data[i:i+filter] for i in range(0,self._size,filter))
-        return result
+        return (self._data[i:i+filter] for i in range(0,self._size,filter))
 
     @abstractmethod
     def save(self):
@@ -238,96 +236,87 @@ class RelationshipImage(AbstractResizerClass):
         for i in range(0,self._size-1):
             self.__byteHash[self._data[i]] += 1
             self.__relationHash[self._data[i]][self._data[i+1]] += 1
+        self.__byteHash[self._data[-1]] += 1
         self._result = self._makingImageMap()
 
     def _makingImageMap(self):
         rgbList = [[0] * 256 for i in range(0, 256)]
-        result = np.zeros((256, 256, 3))
         for i in range(0,256):
             divider = self.__byteHash[i]
             if divider != 0:
                 for j in range(0, 256):
-                    if self.__relationHash[i][j] != 0:
-                        amount = self.__relationHash[i][j]/divider *256 * 256* 256
-                        result.itemset((i,j,0), int(amount%256))
-                        amount = int(amount/256)
-                        result.itemset((i,j,1), int(amount%256))
-                        amount = int(amount/256)
-                        result.itemset((i,j,2),amount%256)
-                        result.itemset
-
+                    rgbList[i][j] = int((self.__relationHash[i][j] / divider) * 100)
+        result = np.zeros((256,256,3))
         for i in range(0,256):
             for j in range(0,256):
                 # result.itemset((i, j , 0), i)
                 # result.itemset((i, j , 1) , j)
                 result.itemset((i, j, 2), rgbList[i][j])
+        cv.imshow(mat=result,winname="original")
+        cv.waitKey(0)
         return result
 
     def save(self):
-        name = self._child.split(".")[0] + ".png"
-        # im = Image.fromarray(np.uint8(self._result))
-        # im.show()
-        # im.save(PathClass.instance().getImageFolder()+name)
+        name = self._child.split(".")[0] + ".jpg"
         cv.imwrite(PathClass.instance().getImageFolder()+name, self._result)
-        # cv.imshow(mat=self._result,winname="wtf")
-        # cv.waitKey(0)
+        cv.imshow(mat=self._result,winname="wtf")
+        cv.waitKey(0)
 
-    def get_image(self):
-        return self._result
+class ReverseByteNet(AbstractResizerClass):
 
-class RawByteImage(AbstractResizerClass):
-    def __init__(self,child):
-        AbstractResizerClass.__init__(self=self,child=child)
-        self.targetSize = int(math.sqrt(int(self._size/3)))+1
+    def __init__(self, child):
+        ReverseByteNet.__init__(self = self, child=child)
+        self._relation_prob = json.loads()
+        self._chunks = child
+        self._encoding_list = []
+        self._encoding_activation_function = self.__select_activation_function("sigmoid")
+
+    def __select_activation_function(self, activation_value):
+        if activation_value == "sigmoid":
+            def sigmoid(x):
+                return 1 / (1 + np.exp(-x))
+            return sigmoid
+
     def save(self):
-        name = self._child.split(".")[0]+".png"
-        cv.imwrite(PathClass.instance().getImageFolder()+name, self._result)
-
-    def operating(self):
-        super().operating()
+        pass
 
     def resizing(self):
-        goalSize = self.targetSize * self.targetSize * 3
-        if goalSize > self._size:
-            for i in range(0, goalSize - self._size):
-                self._data.append(0)
-        self._making_image()
-
-    def _making_image(self):
-        self._data = super().chunking(filter=3)
-        self._result = self._making_row(self._data)
-
-    def _making_row(self,original):
-        result = np.zeros((self.targetSize,self.targetSize,3))
-        original = super().chunking(filter=self.targetSize)
-        for i in range(0,self.targetSize):
-            for j in range(0, self.targetSize):
-                try:
-                    if original[i][j]:
-                        result[i][j] = np.array(original[i][j])
-                except Exception as ex:
-                    pass
-            # result[i] = np.array(original[i*self.targetSize:(i+1)*self.targetSize])
-        return result
-
-    def get_image(self):
-        return self._result
-
-
-class ImageBlender:
-    def __init__(self, child):
-        self._child = child
-        self._relationship = RelationshipImage(child=child)
-        self._rawByteImage = RawByteImage(child=child)
+        pass
 
     def operating(self):
-        self._relationship.resizing()
-        self._rawByteImage.resizing()
-        relation_image = self._relationship.get_image()
-        raw_byte_image = self._rawByteImage.get_image()
-        raw_byte_image = cv.resize(raw_byte_image, dsize=(256, 256), interpolation=cv.INTER_AREA)
-        raw_byte_rate = 0.5
-        relation_rate = 1 - raw_byte_rate
-        dst = cv.addWeighted(raw_byte_image, raw_byte_rate, relation_image, relation_rate, 0)
-        name = self._child.split(".")[0]+".png"
-        cv.imwrite(PathClass.instance().getImageFolder()+name, dst)
+        self._encoding()
+        self._decoding()
+
+    def _encoding(self):
+        self. _chunks = self.resizing()
+        calculation_list =[]
+        for chunk in range(self._chunks):
+            calculation_list.append(self.__calculate_likelyhood(chunk))
+        self._encoding_list = self.__making_encoding_list(calculation_list)
+
+    def __maing_encoding_list(self, calculation_list):
+        size_of_calculation_list = len(calculation_list)
+        result = [0 for i in range(0,size_of_calculation_list)]
+        for i in range(0, len(result)):
+            for j in range(0, i):
+                result[j] += calculation_list[i] * (1-self._encoding_activation_function(j-i))
+            result[i] += calculation_list[i]
+            for k in range(i+1, len(result)):
+                result[k] += calculation_list[i] * (1-self._encoding_activation_function(i-k))
+        return result
+
+    def _decoding(self):
+        self.
+
+
+
+    def __calculate_likelyhood(self,chunk):
+        prev = -1
+        result = 0
+        for b in range(chunk):
+            if prev == -1:
+                pass
+            else:
+                result += math.log(self._relation_prob[prev][b])
+            prev = b
+        return result
